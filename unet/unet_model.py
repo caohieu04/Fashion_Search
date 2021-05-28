@@ -1,7 +1,6 @@
 """ Full assembly of the parts to form the complete network """
 
 import torch.nn.functional as F
-
 from .unet_parts import *
 
 
@@ -22,8 +21,8 @@ class UNet(nn.Module):
         self.up2 = Up(512, 256 // factor, bilinear)
         self.up3 = Up(256, 128 // factor, bilinear)
         self.up4 = Up(128, 64, bilinear)
-        self.outc = OutConv(64, n_classes)
-
+        self.rcstr = DoubleConv(64, 3)
+        # self.outc = OutConv(64, n_classes)  
     def forward(self, x):
         x1 = self.inc(x)
         x2 = self.down1(x1)
@@ -34,5 +33,8 @@ class UNet(nn.Module):
         x = self.up2(x, x3)
         x = self.up3(x, x2)
         x = self.up4(x, x1)
-        logits = self.outc(x)
-        return logits
+
+        x = self.rcstr(x)
+        return x
+        # logits = self.outc(x)
+        # return logits
