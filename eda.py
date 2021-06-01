@@ -63,7 +63,7 @@ class dataset(Dataset):
         return sample
 
 
-    
+
 class ARGS():
     batch_size = 64
     epochs = 10
@@ -81,6 +81,7 @@ if __name__ == '__main__':
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
     criterion = nn.MSELoss()
     
+    fig, axes = plt.subplots(1, 10)
     # print(model)
     for epoch in range(EPOCHS):
         loss = 0
@@ -95,8 +96,8 @@ if __name__ == '__main__':
             db_img = outputs[0].detach().numpy().transpose((1, 2, 0))
             db_img = (db_img * 255).astype(np.uint8)
             print(db_img.shape)
-            plt.imshow(db_img)
-            sys.exit(0)
+            axes[epoch].imshow(db_img)
+            break
             train_loss = criterion(outputs, x_batch)
             train_loss.backward()
             optimizer.step()
@@ -104,6 +105,7 @@ if __name__ == '__main__':
             
         loss = loss / len(dataloader)
         print("epoch : {}/{}, loss = {:.6f}".format(epoch + 1, EPOCHS, loss))
+    plt.show()
 
 
 
