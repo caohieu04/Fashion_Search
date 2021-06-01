@@ -22,34 +22,19 @@ class UNet(nn.Module):
         self.up3 = Up(256, 128 // factor, bilinear)
         self.up4 = Up(128, 64, bilinear)
         self.rcstr = DoubleConv(64, 3)
-        # self.outc = OutConv(64, n_classes) 
-    
-    def forward_half1(self, x):
+        # self.outc = OutConv(64, n_classes)  
+    def forward(self, x):
         x1 = self.inc(x)
         x2 = self.down1(x1)
         x3 = self.down2(x2)
         x4 = self.down3(x3)
         x5 = self.down4(x4)
-        return x1, x2, x3, x4, x5
-    
-    def forward_half2(self, x1, x2, x3, x4, x5):
         x = self.up1(x5, x4)
         x = self.up2(x, x3)
         x = self.up3(x, x2)
         x = self.up4(x, x1)
+
         x = self.rcstr(x)
         return x
-    
-    def forward(self, x, path='all'):
-        if path=='all':
-            x1, x2, x3, x4, x5 = self.forward_half1(x)
-            x = self.forward_half2(x1, x2, x3, x4, x5)
-            return x
-        elif path=='half1':
-            x1, x2, x3, x4, x5 = self.forward_half1(x)
-            return x5
-        
-        
-        
         # logits = self.outc(x)
         # return logits

@@ -68,7 +68,7 @@ class dataset(Dataset):
 
 class ARGS():
     batch_size = 16
-    epochs = 40
+    epochs = 30
 
 
 def train(net):
@@ -78,7 +78,7 @@ def train(net):
     dataloader = DataLoader(DF, batch_size = args.batch_size, shuffle=True)
     EPOCHS = args.epochs
 
-    optimizer = optim.Adam(net.parameters(), lr=1e-4)
+    optimizer = optim.Adam(net.parameters(), lr=3e-3)
     criterion = nn.MSELoss()
     
     fig, axes = plt.subplots(8, 4, figsize=(32, 32))
@@ -93,11 +93,11 @@ def train(net):
             x_batch = x_batch.to(device=device, dtype=torch.float32)
             abs_batch = sample_batched['abstr']
             optimizer.zero_grad()
-            outputs = net(x_batch)
+            outputs = net(x_batch, path='all')
             
             train_loss = criterion(outputs, x_batch)
             train_loss.backward()
-            nn.utils.clip_grad_value_(net.parameters(), 0.1)
+            nn.utils.clip_grad_value_(net.parameters(), 0.05)
             optimizer.step()
             loss += train_loss.item()
             
