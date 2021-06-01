@@ -3,6 +3,12 @@ import argparse
 import logging
 import os
 import sys
+import platform
+if platform.system() == 'Windows':
+    ROOT_DIR = r'D:\GitHub\Fashion_Search'
+else:
+    ROOT_DIR = '/content/Fashion_Search'
+os.chdir(ROOT_DIR)
 
 import pandas as pd
 import numpy as np
@@ -24,12 +30,7 @@ from torchvision.transforms.functional import crop
 import sys
 import skimage.io as io
 
-import platform
-if platform.system() == 'Windows':
-    ROOT_DIR = r'D:\GitHub\Fashion_Search'
-else:
-    ROOT_DIR = '/content/Fashion_Search'
-os.chdir(ROOT_DIR)
+
 
 HEIGHT = 128
 WIDTH = 128
@@ -46,6 +47,7 @@ class dataset(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
         img_name = os.path.join(self.root_dir, self.csv_file.iloc[idx, 0])
+        abstr_gr = self.csv_file.iloc[idx, 0].split(r'/')[1]
         image = io.imread(img_name)
         x1, y1, x2, y2 = map(int, self.csv_file.iloc[idx, 4:8])
         image = image[y1:y2, x1:x2]
@@ -59,54 +61,64 @@ class dataset(Dataset):
             
         ])
         image = data_transform(image)
-        sample = {'image': image}
+        sample = {'image': image, 'abstr': abstr_gr}
         return sample
 
 
 
 class ARGS():
-    batch_size = 64
-    epochs = 10
+    batch_size = 16
+    epochs = 40
 
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+def train(net):
     args = ARGS()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    DF = dataset(csv_file='data/cloth.csv', root_dir=ROOT_DIR)
+    DF = dataset(csv_file='data/cloth_train.csv', root_dir=ROOT_DIR)
     dataloader = DataLoader(DF, batch_size = args.batch_size, shuffle=True)
     EPOCHS = args.epochs
 
-    model = UNet(3, n_classes=1, bilinear=True)
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = optim.Adam(net.parameters(), lr=1e-4)
     criterion = nn.MSELoss()
     
-    fig, axes = plt.subplots(1, 10)
-    # print(model)
+    fig, axes = plt.subplots(8, 4, figsize=(32, 32))
+    # print(net)
+    max_i_batch = 10
     for epoch in range(EPOCHS):
         loss = 0
-
+        net.train()
+        # pbar = tqdm(enumerate(dataloader), total = len(dataloader))
         for i_batch, sample_batched in enumerate(dataloader):
             x_batch = sample_batched['image'].type(torch.FloatTensor)
-
+            x_batch = x_batch.to(device=device, dtype=torch.float32)
+            abs_batch = sample_batched['abstr']
             optimizer.zero_grad()
-            outputs = model(x_batch)
-
-            print(outputs.shape)
-            db_img = outputs[0].detach().numpy().transpose((1, 2, 0))
-            db_img = (db_img * 255).astype(np.uint8)
-            print(db_img.shape)
-            axes[epoch].imshow(db_img)
-            break
+            outputs = net(x_batch)
+            
             train_loss = criterion(outputs, x_batch)
             train_loss.backward()
+            nn.utils.clip_grad_value_(net.parameters(), 0.1)
             optimizer.step()
             loss += train_loss.item()
             
-        loss = loss / len(dataloader)
+            if i_batch > max_i_batch:
+              break
+            # if i_batch > 0 and i_batch % 50 == 0 :
+            #     print(f"With batch {i_batch} current loss is {loss / (i_batch * args.batch_size)}")
         print("epoch : {}/{}, loss = {:.6f}".format(epoch + 1, EPOCHS, loss))
+            
+    for i in range(16):
+        axes[i // 4, i % 4].axis('off')
+        axes[i // 4 + 4, i % 4].axis('off')
+        axes[i // 4, i % 4].imshow(x_batch[i].cpu().detach().numpy().transpose((1, 2, 0)))
+        db_img = outputs[i].cpu().detach().numpy().transpose((1, 2, 0))
+        db_img = (db_img * 255).astype(np.uint8)
+        axes[i // 4 + 4, i % 4].imshow(db_img)
+    loss = loss / len(dataloader)
     plt.show()
 
-
-
+if __name__ == '__main__':
+    net = UNet(3, n_classes=1, bilinear=True)
+    net.cuda()
+    train(net)
 # %%
