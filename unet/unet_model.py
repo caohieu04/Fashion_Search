@@ -11,7 +11,7 @@ class UNet(nn.Module):
         self.n_classes = n_classes
         self.bilinear = bilinear
 
-        scale = 8
+        scale = 4
         self.inc = DoubleConv(n_channels, scale)
         self.down1 = Down(scale, scale * 2)
         self.down2 = Down(scale * 2, scale * 4)
