@@ -47,6 +47,7 @@ class dataset(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
         img_name = os.path.join(self.root_dir, self.csv_file.iloc[idx, 0])
+        name = self.csv_file.iloc[idx, 0]
         abstr_gr = self.csv_file.iloc[idx, 0].split(r'/')[1]
         image = io.imread(img_name)
         x1, y1, x2, y2 = map(int, self.csv_file.iloc[idx, 4:8])
@@ -61,14 +62,14 @@ class dataset(Dataset):
             
         ])
         image = data_transform(image)
-        sample = {'image': image, 'abstr': abstr_gr}
+        sample = {'image': image, 'abstr': abstr_gr, 'name':name}
         return sample
 
 
 
 class ARGS():
     batch_size = 16
-    epochs = 30
+    epochs = 1
 
 
 def train(net):
@@ -83,35 +84,50 @@ def train(net):
     
     fig, axes = plt.subplots(8, 4, figsize=(32, 32))
     # print(net)
-    max_i_batch = 10
     for epoch in range(EPOCHS):
         loss = 0
         net.train()
         # pbar = tqdm(enumerate(dataloader), total = len(dataloader))
+        lim = 0
+        print('=' * 100)
+        first = True
         for i_batch, sample_batched in enumerate(dataloader):
             x_batch = sample_batched['image'].type(torch.FloatTensor)
             x_batch = x_batch.to(device=device, dtype=torch.float32)
             abs_batch = sample_batched['abstr']
             optimizer.zero_grad()
-            outputs = net(x_batch, path='all')
+            outputs = net(x_batch)
+
+            if epoch == EPOCHS and first:
+                x_db = x_batch
+                y_db = outputs
+                first = False
             
             train_loss = criterion(outputs, x_batch)
             train_loss.backward()
             nn.utils.clip_grad_value_(net.parameters(), 0.05)
             optimizer.step()
             loss += train_loss.item()
-            
-            if i_batch > max_i_batch:
-              break
-            # if i_batch > 0 and i_batch % 50 == 0 :
-            #     print(f"With batch {i_batch} current loss is {loss / (i_batch * args.batch_size)}")
-        print("epoch : {}/{}, loss = {:.6f}".format(epoch + 1, EPOCHS, loss))
+            if lim > 0 and i_batch > lim:
+                break
+            if i_batch > 0 and i_batch * args.batch_size % 4000 == 0 :
+                print(f"    With number of images {i_batch * args.batch_size} current loss is {loss}")
+                
+        dir_checkpoint = 'checkpoints/'
+        if save_cp:
+            try:
+                os.mkdir(dir_checkpoint)
+            except OSError:
+                pass
+            torch.save(net.state_dict(),
+                       dir_checkpoint + f'CP_epoch{epoch + 1}.pth')
+        print("Epoch : {}/{}, loss = {:.6f}".format(epoch + 1, EPOCHS, loss))
             
     for i in range(16):
         axes[i // 4, i % 4].axis('off')
         axes[i // 4 + 4, i % 4].axis('off')
-        axes[i // 4, i % 4].imshow(x_batch[i].cpu().detach().numpy().transpose((1, 2, 0)))
-        db_img = outputs[i].cpu().detach().numpy().transpose((1, 2, 0))
+        axes[i // 4, i % 4].imshow(x_db[i].cpu().detach().numpy().transpose((1, 2, 0)))
+        db_img = y_db[i].cpu().detach().numpy().transpose((1, 2, 0))
         db_img = (db_img * 255).astype(np.uint8)
         axes[i // 4 + 4, i % 4].imshow(db_img)
     loss = loss / len(dataloader)
@@ -122,3 +138,34 @@ if __name__ == '__main__':
     net.cuda()
     train(net)
 # %%
+handle = net.down4.register_forward_hook(func)
+down4hook = 0
+def func(self, input, output):
+    down4hook = torch.flatten(output[0])
+
+MasterDict = {}
+
+def extract_vector(net):
+    args = ARGS()
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    DF = dataset(csv_file='data/cloth_train.csv', root_dir=ROOT_DIR)
+    dataloader = DataLoader(DF, batch_size = args.batch_size, shuffle=True)
+    EPOCHS = args.epochs
+
+    net.eval()
+    pbar = tqdm(enumerate(dataloader), total=len(dataloader))
+    for i_batch, sample_batched in pbar:
+        x_batch = sample_batched['image'].type(torch.FloatTensor)
+        x_batch = x_batch.to(device=device, dtype=torch.float32)
+
+        abstr = sample_batched['abstr']
+        name = sample_batched['name']
+        outputs = net(x_batch)
+        
+        for i in range(len(abstr)):
+          if not abstr[i] in MasterDict:
+              MasterDict[abstr[i]] = []
+        MasterDict[abstr[i]] = (name[i].split(r'/')[2], down4hook)
+extract_vector(net)
+print(len(MasterDict.keys()))
+handle.remove()
