@@ -34,7 +34,9 @@ import skimage.io as io
 
 HEIGHT = 128
 WIDTH = 128
-
+#plot grid xy
+PGX = 2
+PGY = 8
 
 
 class dataset(Dataset):
@@ -69,12 +71,11 @@ class dataset(Dataset):
 
 class ARGS():
     batch_size = 16
-    epochs = 1
-
+    epochs = 10
+args = ARGS()
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def train(net):
-    args = ARGS()
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     DF = dataset(csv_file='data/cloth_train.csv', root_dir=ROOT_DIR)
     dataloader = DataLoader(DF, batch_size = args.batch_size, shuffle=True)
     EPOCHS = args.epochs
@@ -82,14 +83,14 @@ def train(net):
     optimizer = optim.Adam(net.parameters(), lr=3e-3)
     criterion = nn.MSELoss()
     
-    fig, axes = plt.subplots(8, 4, figsize=(32, 32))
+    fig, axes = plt.subplots(PGX * 2, PGY, figsize=(16, 16))
     # print(net)
     for epoch in range(EPOCHS):
         loss = 0
         net.train()
         # pbar = tqdm(enumerate(dataloader), total = len(dataloader))
         lim = 0
-        print('=' * 100)
+        print('=' * 160)
         first = True
         for i_batch, sample_batched in enumerate(dataloader):
             x_batch = sample_batched['image'].type(torch.FloatTensor)
@@ -98,7 +99,7 @@ def train(net):
             optimizer.zero_grad()
             outputs = net(x_batch)
 
-            if epoch == EPOCHS and first:
+            if first:
                 x_db = x_batch
                 y_db = outputs
                 first = False
@@ -112,8 +113,9 @@ def train(net):
                 break
             if i_batch > 0 and i_batch * args.batch_size % 4000 == 0 :
                 print(f"    With number of images {i_batch * args.batch_size} current loss is {loss}")
-                
+
         dir_checkpoint = 'checkpoints/'
+        save_cp = True
         if save_cp:
             try:
                 os.mkdir(dir_checkpoint)
@@ -123,20 +125,31 @@ def train(net):
                        dir_checkpoint + f'CP_epoch{epoch + 1}.pth')
         print("Epoch : {}/{}, loss = {:.6f}".format(epoch + 1, EPOCHS, loss))
             
-    for i in range(16):
-        axes[i // 4, i % 4].axis('off')
-        axes[i // 4 + 4, i % 4].axis('off')
-        axes[i // 4, i % 4].imshow(x_db[i].cpu().detach().numpy().transpose((1, 2, 0)))
+    for i in range(args.batch_size):
+        axes[i // PGY, i % PGY].axis('off')
+        axes[i // PGY + PGX, i % PGY].axis('off')
+        axes[i // PGY, i % PGY].imshow(x_db[i].cpu().detach().numpy().transpose((1, 2, 0)))
         db_img = y_db[i].cpu().detach().numpy().transpose((1, 2, 0))
         db_img = (db_img * 255).astype(np.uint8)
-        axes[i // 4 + 4, i % 4].imshow(db_img)
+        axes[i // PGY + PGX, i % PGY].imshow(db_img)
     loss = loss / len(dataloader)
+    plt.subplots_adjust(left=0,
+                    bottom=0, 
+                    right=1, 
+                    top=0.5, 
+                    wspace=0, 
+                    hspace=0.001)
     plt.show()
 
 if __name__ == '__main__':
-    net = UNet(3, n_classes=1, bilinear=True)
+  net = UNet(3, n_classes=1, bilinear=True)
+  if os.path.exists(r'./models'):
+    net.load_state_dict(torch.load(r'./models/CP_epoch10.pth'))
+    net.cuda()
+  else:
     net.cuda()
     train(net)
+
 # %%
 handle = net.down4.register_forward_hook(func)
 down4hook = 0
