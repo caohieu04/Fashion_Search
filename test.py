@@ -10,7 +10,7 @@ else:
 os.chdir(ROOT_DIR)
 
 import pandas as pd
-train_label_df  = pd.read_csv('data/test/cloth_train.csv')
+train_label_df  = pd.read_csv('data/cloth_train.csv')
 MasterDict = {}
 for index, row in train_label_df.iterrows():
   key = tuple(row['image_name'].split(r'/')[1:])
@@ -28,7 +28,7 @@ class Info():
     self.name = df.iloc[idx].name_img
     self.feature = torch.FloatTensor(list(map(float, df.iloc[idx].feature[1:-1].split(','))))
     self.label = MasterDict[(self.group, self.name)]
-source_info = Info(train_df, 30)
+source_info = Info(train_df, 24)
 cossim = nn.CosineSimilarity(dim=0)
 
 import matplotlib.pyplot as plt
@@ -40,7 +40,8 @@ def cal_acc(source_info, df):
   lis = []
   # size = train_gr_cnt[source_info.group]
   size = train_catena_cnt[source_info.label]
-  for index in range(len(df)):
+  from tqdm import tqdm
+  for index in tqdm(range(len(df)), position=0, leave=True):
     target_info = Info(df, index)
     heapq.heappush(lis, (cossim(source_info.feature, target_info.feature), 
                          target_info.group, 
@@ -65,12 +66,12 @@ def list_of_path_tosubplot(source_info, lis):
   img = io.imread(os.path.join('img', source_info.group, source_info.name))
   axes[0, 0].axis('off')
   axes[0, 0].imshow(img)
-  from tqdm.notebook import tqdm
-  for i in tqdm(range(1, len(lis[:G * G]))):
-    axes[i // G, i % G].axis('off')
-    print(lis[i][1], "##", lis[i][2], "##", lis[i][3][:lim_G])
-    img = io.imread(os.path.join('img', lis[i][1], lis[i][2]))
-    axes[i // G, i % G].imshow(img)
+  for i in range(0, len(lis[:G * G]) - 1):
+    j = i  + 1
+    axes[j // G, j % G].axis('off')
+    print(lis[i][1], "##", lis[j][2], "##", lis[j][3][:lim_G])
+    img = io.imread(os.path.join('img', lis[j][1], lis[j][2]))
+    axes[j // G, j % G].imshow(img)
     
 acc = cal_acc(source_info, train_df)
 print(acc)
