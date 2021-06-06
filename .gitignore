@@ -6,3 +6,4 @@ SUBMISSION*
 venv/
 *.rar
 data/test
+latent
