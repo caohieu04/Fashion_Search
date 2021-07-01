@@ -23,48 +23,54 @@ train_catena_cnt = train_label_df.category_name.value_counts()
 print(f"Time: {time.time() - start}")
 
 start = time.time()
-lists = []
 infile = open('latent', 'rb')
 start = time.time()
 cnt = 3200
+god_lis = []
 while 1:
     try:
-        lists.append(pickle.load(infile))
+        lis = pickle.load(infile)
+        for k,v in lis.items():
+          god_lis.append((k[0], k[1], v))
         cnt += 3200
-        if (cnt >= 100000):
+        if (cnt >= 300000):
           break
     except (EOFError):
         break
-god_lis = [(k[0], k[1], v) for element in lists for k,v in element.items()]
 infile.close()
 print(f"Time: {time.time() - start}")
-
+    
 #%%
 class Info():
   def __init__(self, df, idx):
     self.group, self.name, self.feature = df[idx]
     self.feature = torch.FloatTensor(self.feature)
     self.label = MasterDict[(self.group, self.name)]
-key = 35
+import matplotlib.pyplot as plt
+import heapq
+G = 5
+lim_G = G * G
+
+Infos = []
+for i in range(len(god_lis)):
+  Infos.append(Info(god_lis, i))
+#%% 
+key = 999
 source_info = Info(god_lis, key)
 print(key, source_info.group, source_info.name)
 cossim = nn.CosineSimilarity(dim=0)
 
-import matplotlib.pyplot as plt
-import heapq
-G = 4
-lim_G = G * G
-
-def cal_acc(source_info, df):
+def cal_acc(source_info, df, Infos):
   lis = []
   # size = train_gr_cnt[source_info.group]
-  size = train_catena_cnt[source_info.label]
+  size = lim_G
   from tqdm import tqdm
   for index in tqdm(range(len(df)), position=0, leave=True):
-    target_info = Info(df, index)
+    target_info = Infos[index]
     if source_info.label != target_info.label:
       continue
-    heapq.heappush(lis, (cossim(source_info.feature, target_info.feature), 
+    dis = cossim(source_info.feature, target_info.feature)
+    heapq.heappush(lis, (dis, 
                          target_info.group, 
                          target_info.name, 
                          target_info.label))
@@ -90,11 +96,11 @@ def list_of_path_tosubplot(source_info, lis):
   for i in range(0, len(lis[:G * G]) - 1):
     j = i  + 1
     axes[j // G, j % G].axis('off')
-    print(lis[i][1], "##", lis[j][2], "##", lis[j][3][:lim_G])
+    print(lis[j][1], "##", lis[j][2], "##", lis[j][3][:lim_G], "##", lis[j][0])
     img = io.imread(os.path.join('img', lis[j][1], lis[j][2]))
     axes[j // G, j % G].imshow(img)
     
-acc = cal_acc(source_info, god_lis)
+acc = cal_acc(source_info, god_lis, Infos)
 print(acc)
   
     

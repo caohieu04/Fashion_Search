@@ -188,7 +188,7 @@ if __name__ == '__main__':
   net = UNet(3, n_classes=1, bilinear=True)
   if os.path.exists(r'./model') and RETRAIN == False:
     net.to('cpu')
-    net.load_state_dict(torch.load(r'./model/CP_epoch4.pth', map_location=torch.device('cpu')))
+    net.load_state_dict(torch.load(r'./model/CP_epoch9.pth', map_location=torch.device('cpu')))
     visualize('test')
   else:
     net.cuda()

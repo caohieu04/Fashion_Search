@@ -1,0 +1,54 @@
+[
+  {
+    "node_id": 0,
+    "name_node": "A",
+    "lat": 0,
+    "lon": 0,
+    "connection": [
+        {
+            "node_id": 1,
+            "maxspeed": 2,
+            "name_link": "AB",
+            "highway": "trunk",
+            "oneway": "yes",
+            "time_travel": "1.5",
+            "distance": "3",
+        },
+        {
+          "node_id": 2,
+          "maxspeed": 2,
+          "name_link": "AC",
+          "highway": "trunk",
+          "oneway": "yes",
+          "time_travel": "2.5",
+          "distance": "5",
+        }
+    ]
+  },
+  {
+  "node_id": 1,
+  "name_node": "B",
+  "lat": 0,
+  "lon": 3,
+  "connection": [
+      {
+          "node_id": 1,
+          "maxspeed": 2,
+          "name_link": "AB",
+          "highway": "trunk",
+          "oneway": "yes",
+          "time_travel": "1.5",
+          "distance": "3",
+      },
+      {
+        "node_id": 2,
+        "maxspeed": 2,
+        "name_link": "AC",
+        "highway": "trunk",
+        "oneway": "yes",
+        "time_travel": "2.5",
+        "distance": "5",
+      }
+    ]
+  }
+]
