@@ -8,8 +8,8 @@ Using UNET to reconstruct image, then with extracted latent vectors, similar clo
 
 ### Reconstruct
 
-![](encode-decode.png)
+![](demo1.png)
 
 ### Near Search
 
-![](near_search.png)
+![](demo2.png)
