@@ -12,4 +12,4 @@ Using UNET to reconstruct image, then with extracted latent vectors, similar clo
 
 ### Near Search
 
-![](near-search.png)
+![](near_search.png)
